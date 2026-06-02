@@ -1130,38 +1130,10 @@
     }
 
     @media (max-width: 680px) {
-      /* Collapse the 280vh scroll tunnel — mobile can't scrub video */
-      #phone-reveal {
-        height: auto;
-        min-height: 100vh;
-      }
-      .phone-sticky {
-        grid-template-columns: 1fr;
-        grid-template-rows: 1fr auto;
-        position: relative;
-        height: auto;
-        min-height: 100vh;
-        padding-bottom: 2.5rem;
-      }
-      /* Bigger phone on mobile so it fills the single column */
-      .phone-frame-wrap {
-        width: clamp(200px, 55vw, 280px);
-      }
-      /* Show text panel below phone on mobile/tablet in portrait */
-      .phone-text-panel {
-        display: flex;
-        opacity: 1 !important;
-        transform: none !important;
-        padding: 2rem 1.5rem 1rem;
-        gap: 1rem;
-        background: #071409;
-      }
-      .phone-text-panel h2 {
-        font-size: clamp(1.5rem, 6vw, 2rem);
-      }
-      .phone-text-panel p {
-        font-size: 0.9rem;
-      }
+      .phone-sticky { grid-template-columns: 1fr; }
+      .phone-text-panel { display: none; }
+      /* Bigger phone frame on mobile single-column */
+      .phone-frame-wrap { width: clamp(200px, 55vw, 280px); }
     }
 
     /* ── Left column: phone frame ─────────────────────────────── */
@@ -1599,7 +1571,7 @@
                 poster="assets/phone-screen.png"
                 muted
                 playsinline
-                preload="metadata"
+                preload="auto"
                 aria-label="Tokenometree app splash screen"
               ></video>
             </div>
@@ -2092,21 +2064,6 @@
         video.addEventListener('loadedmetadata', () => { video.currentTime = video.duration; }, { once: true });
         if (textPanel) { textPanel.style.opacity = '1'; textPanel.style.transform = 'none'; }
         if (hint) hint.style.opacity = '0';
-        return;
-      }
-
-      const isMobile = window.matchMedia('(max-width: 680px)').matches;
-
-      if (isMobile) {
-        /* On mobile: autoplay the video instead of scroll-scrubbing */
-        video.loop = true;
-        /* Seek to first frame so there's no black flash before play */
-        video.currentTime = 0;
-        /* play() may be blocked until user interaction; that's fine — video shows first frame */
-        video.play().catch(() => {});
-        if (hint) hint.style.opacity = '0';
-        /* Show text panel immediately (CSS already sets it visible, but override JS inline styles) */
-        if (textPanel) { textPanel.style.opacity = '1'; textPanel.style.transform = 'none'; }
         return;
       }
 
