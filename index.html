@@ -1113,7 +1113,7 @@
       max-width: 100%;
       width: 100vw;
       margin-left: calc(50% - 50vw);
-      height: 280vh;
+      height: 180vh;
       position: relative;
       background: #071409; /* matches phone-screen.png dark green bg */
     }
@@ -2066,47 +2066,36 @@
         return;
       }
 
-      /* Force the browser to buffer the full video immediately so seeks
-         are instant rather than stalling waiting for data */
-      video.play().then(() => video.pause()).catch(() => {});
-
-      let targetTime = 0;
-      let rafId = null;
-
-      /* Smoothly lerp currentTime toward the scroll target each frame —
-         avoids the stutter from setting currentTime on every scroll event */
-      function drivePlayhead() {
-        rafId = requestAnimationFrame(drivePlayhead);
-        const diff = targetTime - video.currentTime;
-        if (Math.abs(diff) > 0.01) {
-          video.currentTime += diff * 0.18;
-        }
-      }
-
       function attach() {
         const dur = video.duration || 8;
 
-        drivePlayhead();
+        /* Pre-seek to 15% of the video so it's already mid-animation
+           when the section first scrolls into view */
+        video.currentTime = dur * 0.15;
 
         ScrollTrigger.create({
           trigger: '#phone-reveal',
-          start: 'top top',
+          /* Start scrubbing 40vh before the section top hits the viewport —
+             the video is already playing before the section is fully visible */
+          start: 'top 140%',
           end: 'bottom bottom',
-          scrub: false,
+          scrub: 0.3,
           onUpdate(self) {
             const p = self.progress;
 
-            /* Map first 75% of scroll to full video duration */
-            targetTime = Math.min(p / 0.75, 1) * dur;
+            /* Map full scroll range directly to full video duration.
+               No windowing — the whole animation plays across the whole scroll. */
+            const target = p * dur;
+            video.currentTime = target;
 
-            /* Scroll hint fades out in the first 6% of scroll */
-            if (hint) hint.style.opacity = p < 0.06 ? (1 - p / 0.06).toFixed(2) : '0';
+            /* Hint fades out in first 8% of scroll */
+            if (hint) hint.style.opacity = p < 0.08 ? (1 - p / 0.08).toFixed(2) : '0';
 
-            /* Text panel slides in from 50%–80% of scroll */
+            /* Text panel slides in from 55%–85% of scroll */
             if (textPanel) {
               let op, tx;
-              if (p < 0.50) { op = 0; tx = 36; }
-              else if (p < 0.80) { const e = easeOut2((p - 0.50) / 0.30); op = e; tx = 36 - e * 36; }
+              if (p < 0.55) { op = 0; tx = 36; }
+              else if (p < 0.85) { const e = easeOut2((p - 0.55) / 0.30); op = e; tx = 36 - e * 36; }
               else { op = 1; tx = 0; }
               textPanel.style.opacity   = op.toFixed(3);
               textPanel.style.transform = `translateX(${tx.toFixed(1)}px)`;
@@ -2115,8 +2104,18 @@
         });
       }
 
-      if (video.readyState >= 1) attach();
-      else video.addEventListener('loadedmetadata', attach, { once: true });
+      /* Buffer the full video as early as possible: play 1 frame then pause.
+         With dense keyframes in the re-encoded file, seeks are now instant. */
+      function buffer() {
+        video.play().then(() => {
+          video.pause();
+          attach();
+        }).catch(() => attach());
+      }
+
+      if (video.readyState >= 3) buffer();
+      else if (video.readyState >= 1) attach();
+      else video.addEventListener('canplay', buffer, { once: true });
     })();
 
     /* ══════════════════════════════════════════════════════════════
