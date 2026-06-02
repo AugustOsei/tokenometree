@@ -1568,7 +1568,6 @@
               <video
                 id="splash-video"
                 src="assets/phone-splash.mp4"
-                poster="assets/phone-screen.png"
                 muted
                 playsinline
                 preload="auto"
@@ -2067,29 +2066,47 @@
         return;
       }
 
+      /* Force the browser to buffer the full video immediately so seeks
+         are instant rather than stalling waiting for data */
+      video.play().then(() => video.pause()).catch(() => {});
+
+      let targetTime = 0;
+      let rafId = null;
+
+      /* Smoothly lerp currentTime toward the scroll target each frame —
+         avoids the stutter from setting currentTime on every scroll event */
+      function drivePlayhead() {
+        rafId = requestAnimationFrame(drivePlayhead);
+        const diff = targetTime - video.currentTime;
+        if (Math.abs(diff) > 0.01) {
+          video.currentTime += diff * 0.18;
+        }
+      }
+
       function attach() {
         const dur = video.duration || 8;
+
+        drivePlayhead();
+
         ScrollTrigger.create({
           trigger: '#phone-reveal',
           start: 'top top',
           end: 'bottom bottom',
-          scrub: 0.6,
+          scrub: false,
           onUpdate(self) {
             const p = self.progress;
 
-            /* Scrub video over first 55% of scroll */
-            const t = Math.min(p / 0.55, 1);
-            const target = t * dur;
-            if (Math.abs(video.currentTime - target) > 0.016) video.currentTime = target;
+            /* Map first 75% of scroll to full video duration */
+            targetTime = Math.min(p / 0.75, 1) * dur;
 
-            /* Scroll hint fades out immediately */
+            /* Scroll hint fades out in the first 6% of scroll */
             if (hint) hint.style.opacity = p < 0.06 ? (1 - p / 0.06).toFixed(2) : '0';
 
-            /* Text panel slides in from 35%–65% of scroll */
+            /* Text panel slides in from 50%–80% of scroll */
             if (textPanel) {
               let op, tx;
-              if (p < 0.35) { op = 0; tx = 36; }
-              else if (p < 0.65) { const e = easeOut2((p - 0.35) / 0.30); op = e; tx = 36 - e * 36; }
+              if (p < 0.50) { op = 0; tx = 36; }
+              else if (p < 0.80) { const e = easeOut2((p - 0.50) / 0.30); op = e; tx = 36 - e * 36; }
               else { op = 1; tx = 0; }
               textPanel.style.opacity   = op.toFixed(3);
               textPanel.style.transform = `translateX(${tx.toFixed(1)}px)`;
