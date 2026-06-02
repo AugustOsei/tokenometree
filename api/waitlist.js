@@ -102,19 +102,8 @@ async function sendConfirmationEmail({ email, position, referralCode }) {
 async function bumpReferrer(supabase, refCode) {
   if (!refCode) return;
 
-  const { data: referrer } = await supabase
-    .from('waitlist')
-    .select('id, position')
-    .eq('referral_code', refCode)
-    .maybeSingle();
-
-  if (!referrer) return;
-
-  const newPosition = Math.max(1, referrer.position - 1);
-  await supabase
-    .from('waitlist')
-    .update({ position: newPosition })
-    .eq('id', referrer.id);
+  /* Atomic decrement — avoids read-then-write race under concurrent signups */
+  await supabase.rpc('bump_referrer_position', { ref_code: refCode });
 }
 
 export default async function handler(req, res) {

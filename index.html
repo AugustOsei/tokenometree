@@ -7,10 +7,21 @@
   <meta property="og:title" content="Tokenometree — Know every token.">
   <meta property="og:description" content="Track AI token usage and spend across Anthropic, OpenAI, OpenRouter, Google and more — in one place.">
   <meta property="og:type" content="website">
+  <meta property="og:url" content="https://tokenometree.com">
+  <meta property="og:image" content="https://tokenometree.com/assets/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Tokenometree — Know every token.">
+  <meta name="twitter:description" content="Track AI token usage and spend across Anthropic, OpenAI, OpenRouter, Google and more — in one place.">
+  <meta name="twitter:image" content="https://tokenometree.com/assets/og-image.png">
   <title>Tokenometree — Know every token.</title>
 
+  <link rel="icon" href="/assets/logo.png" type="image/png">
+  <link rel="apple-touch-icon" href="/assets/logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;1,300&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
   <style>
@@ -360,6 +371,12 @@
     .logo-wrap {
       position: relative;
       margin-bottom: 2.5rem;
+      animation: hero-fade-up 0.9s cubic-bezier(0.16,1,0.3,1) both;
+    }
+
+    @keyframes hero-fade-up {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
     }
 
     /* Glow halo sits behind the logo, not on it */
@@ -406,6 +423,7 @@
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
+      animation: hero-fade-up 0.9s 0.15s cubic-bezier(0.16,1,0.3,1) both;
     }
 
     #hero .subhead {
@@ -414,6 +432,7 @@
       margin-bottom: 2.75rem;
       max-width: 28rem;
       line-height: 1.7;
+      animation: hero-fade-up 0.9s 0.28s cubic-bezier(0.16,1,0.3,1) both;
     }
 
     #hero .social-proof {
@@ -433,6 +452,7 @@
       border: 1px solid rgba(74, 222, 128, 0.1);
       box-shadow: 0 8px 40px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255,255,255,0.04);
       position: relative;
+      animation: hero-fade-up 0.9s 0.42s cubic-bezier(0.16,1,0.3,1) both;
     }
 
     /* ── Hero pixel ticker at bottom ───────────────────────────── */
@@ -445,6 +465,7 @@
       justify-content: center;
       gap: 1.5rem;
       flex-wrap: wrap;
+      padding: 0 1.5rem;
     }
 
     .ticker-item {
@@ -457,7 +478,10 @@
       display: flex;
       align-items: center;
       gap: 0.5rem;
+      transition: color 0.2s;
     }
+
+    .ticker-item:hover { color: var(--lime); }
 
     .ticker-item::before {
       content: "";
@@ -466,7 +490,10 @@
       height: 5px;
       background: var(--lime);
       opacity: 0.5;
+      transition: opacity 0.2s;
     }
+
+    .ticker-item:hover::before { opacity: 1; }
 
 
     /* ═══════════════════════════════════════════════════════════════
@@ -728,6 +755,8 @@
       *, *::before, *::after { animation: none !important; transition: none !important; }
       html { scroll-behavior: auto; }
       #pixel-grid .scanline { display: none; }
+      /* Ensure hero elements are fully visible with no animation delay */
+      .logo-wrap, #hero h1, #hero .subhead, .hero-glass { opacity: 1 !important; transform: none !important; }
     }
 
     /* ── Scrollbar styling ──────────────────────────────────────── */
@@ -1018,7 +1047,9 @@
       line-height: 1.4;
     }
     @media (max-width: 480px) {
-      .log-line { grid-template-columns: 60px 14px 70px 1fr 56px; font-size: 0.65rem; }
+      /* On very small screens, hide timestamp + detail, show model + cost only */
+      .log-line { grid-template-columns: 14px 1fr 56px; font-size: 0.65rem; gap: 0.4rem; }
+      .log-ts, .log-detail { display: none; }
     }
     .log-line.visible { opacity: 1; transform: translateY(0); }
     .log-ts { color: var(--muted2); }
@@ -1099,8 +1130,38 @@
     }
 
     @media (max-width: 680px) {
-      .phone-sticky { grid-template-columns: 1fr; }
-      .phone-text-panel { display: none; }
+      /* Collapse the 280vh scroll tunnel — mobile can't scrub video */
+      #phone-reveal {
+        height: auto;
+        min-height: 100vh;
+      }
+      .phone-sticky {
+        grid-template-columns: 1fr;
+        grid-template-rows: 1fr auto;
+        position: relative;
+        height: auto;
+        min-height: 100vh;
+        padding-bottom: 2.5rem;
+      }
+      /* Bigger phone on mobile so it fills the single column */
+      .phone-frame-wrap {
+        width: clamp(200px, 55vw, 280px);
+      }
+      /* Show text panel below phone on mobile/tablet in portrait */
+      .phone-text-panel {
+        display: flex;
+        opacity: 1 !important;
+        transform: none !important;
+        padding: 2rem 1.5rem 1rem;
+        gap: 1rem;
+        background: #071409;
+      }
+      .phone-text-panel h2 {
+        font-size: clamp(1.5rem, 6vw, 2rem);
+      }
+      .phone-text-panel p {
+        font-size: 0.9rem;
+      }
     }
 
     /* ── Left column: phone frame ─────────────────────────────── */
@@ -1309,8 +1370,11 @@
     /* ── Monitor mobile ─────────────────────────────────────────── */
     @media (max-width: 480px) {
       .monitor-panel { padding: 1.25rem; }
-      .log-console { min-height: 160px; }
+      .log-console { min-height: 160px; max-height: 200px; overflow: hidden; }
       .budget-track { height: 8px; }
+      .model-row { grid-template-columns: 80px 1fr 52px; gap: 0.4rem; }
+      .model-name { font-size: 0.65rem; }
+      .model-tokens { font-size: 0.65rem; }
     }
 
     /* ═══════════════════════════════════════════════════════════════
@@ -1448,7 +1512,7 @@
       <img src="assets/logo.png" alt="Tokenometree" onerror="this.style.display='none'">
       <span class="nav-logo-name">Tokenometree</span>
     </a>
-    <button class="nav-cta" onclick="document.getElementById('hero-email')?.focus(); document.getElementById('hero')?.scrollIntoView({behavior:'smooth'})">
+    <button class="nav-cta" onclick="const h=document.getElementById('hero');h?.scrollIntoView({behavior:'smooth'});setTimeout(()=>document.getElementById('hero-email')?.focus(),400)">
       Join Waitlist
     </button>
   </nav>
@@ -1532,9 +1596,10 @@
               <video
                 id="splash-video"
                 src="assets/phone-splash.mp4"
+                poster="assets/phone-screen.png"
                 muted
                 playsinline
-                preload="auto"
+                preload="metadata"
                 aria-label="Tokenometree app splash screen"
               ></video>
             </div>
@@ -1553,9 +1618,9 @@
           <h2>Your AI spend,<br><em>finally in one place.</em></h2>
           <p>Six different dashboards. Six different invoices. Zero visibility into what you're actually spending — or which model is burning through your budget.</p>
           <ul class="phone-text-bullets">
-            <li>Anthropic, OpenAI, Google, Groq, Mistral — all in one view</li>
-            <li>Runaway agents switch models silently, costs spike undetected</li>
-            <li>No single number for your total AI spend this month</li>
+            <li>One dashboard for Anthropic, OpenAI, Google, Groq &amp; Mistral</li>
+            <li>Catch runaway agent cost spikes before they hit your card</li>
+            <li>See your total AI spend at a glance, updated in real time</li>
           </ul>
         </div>
 
@@ -1639,15 +1704,15 @@
       <div class="stats-grid">
         <div class="stat-item" data-reveal>
           <span class="stat-num" data-count="6" data-suffix="+">6+</span>
-          <span class="stat-label">Providers tracked</span>
+          <span class="stat-label">Providers supported</span>
         </div>
         <div class="stat-item" data-reveal>
-          <span class="stat-num" data-count="1" data-suffix="">1</span>
-          <span class="stat-label">Dashboard for all of them</span>
+          <span class="stat-num" data-count="100" data-suffix="%">100%</span>
+          <span class="stat-label">Of your AI spend, visible</span>
         </div>
         <div class="stat-item" data-reveal>
           <span class="stat-num">$0</span>
-          <span class="stat-label">Surprise at month end</span>
+          <span class="stat-label">Surprise bills</span>
         </div>
       </div>
     </div>
@@ -2030,6 +2095,21 @@
         return;
       }
 
+      const isMobile = window.matchMedia('(max-width: 680px)').matches;
+
+      if (isMobile) {
+        /* On mobile: autoplay the video instead of scroll-scrubbing */
+        video.loop = true;
+        /* Seek to first frame so there's no black flash before play */
+        video.currentTime = 0;
+        /* play() may be blocked until user interaction; that's fine — video shows first frame */
+        video.play().catch(() => {});
+        if (hint) hint.style.opacity = '0';
+        /* Show text panel immediately (CSS already sets it visible, but override JS inline styles) */
+        if (textPanel) { textPanel.style.opacity = '1'; textPanel.style.transform = 'none'; }
+        return;
+      }
+
       function attach() {
         const dur = video.duration || 8;
         ScrollTrigger.create({
@@ -2294,6 +2374,7 @@
     (function initThree() {
       if (typeof THREE === 'undefined') return;
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      if (window.matchMedia('(max-width: 480px)').matches) return;
 
       const canvas = document.getElementById('three-canvas');
       const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: false });
