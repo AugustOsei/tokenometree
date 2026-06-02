@@ -1178,13 +1178,12 @@
       background: #071409;
     }
 
-    /* Video fills the full screen — scrubbed by scroll */
-    #splash-video {
+    /* Canvas fills the full screen — frames painted by scroll */
+    #splash-canvas {
       position: absolute;
       inset: 0;
       width: 100%;
       height: 100%;
-      object-fit: cover;
       display: block;
     }
 
@@ -1565,14 +1564,7 @@
 
             <div class="phone-screen-inset">
               <div class="phone-island" aria-hidden="true"></div>
-              <video
-                id="splash-video"
-                src="assets/phone-splash.mp4"
-                muted
-                playsinline
-                preload="auto"
-                aria-label="Tokenometree app splash screen"
-              ></video>
+              <canvas id="splash-canvas" aria-label="Tokenometree app splash animation"></canvas>
             </div>
 
             <div class="phone-btn-right"  aria-hidden="true"></div>
@@ -2050,48 +2042,62 @@
     /* ══════════════════════════════════════════════════════════════
        PHONE SPLASH VIDEO — scroll scrubs video.currentTime
     ══════════════════════════════════════════════════════════════ */
-    (function initSplashVideo() {
-      const video     = document.getElementById('splash-video');
+    (function initSplashFrames() {
+      const canvas    = document.getElementById('splash-canvas');
       const textPanel = document.getElementById('phone-text-panel');
       const hint      = document.getElementById('phone-scroll-hint');
-      if (!video) return;
+      if (!canvas) return;
+
+      const ctx        = canvas.getContext('2d');
+      const TOTAL      = 48;
+      const frames     = new Array(TOTAL);
+      let   loaded     = 0;
+      let   currentIdx = -1;
 
       function easeOut2(t) { return 1 - (1 - t) * (1 - t); }
 
-      /* Reduced-motion: jump to final frame */
+      /* Size canvas to match the phone screen aspect ratio */
+      canvas.width  = 720;
+      canvas.height = 1280;
+
+      /* Reduced-motion: show last frame only */
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        video.addEventListener('loadedmetadata', () => { video.currentTime = video.duration; }, { once: true });
+        const img = new Image();
+        img.onload = () => ctx.drawImage(img, 0, 0, 720, 1280);
+        img.src = `assets/frames/frame_048.jpg`;
         if (textPanel) { textPanel.style.opacity = '1'; textPanel.style.transform = 'none'; }
         if (hint) hint.style.opacity = '0';
         return;
       }
 
-      function attach() {
-        const dur = video.duration || 8;
+      function drawFrame(idx) {
+        const i = Math.max(0, Math.min(TOTAL - 1, idx));
+        if (i === currentIdx) return;
+        currentIdx = i;
+        const img = frames[i];
+        if (img && img.complete) ctx.drawImage(img, 0, 0, 720, 1280);
+      }
 
-        /* Pre-seek to 15% of the video so it's already mid-animation
-           when the section first scrolls into view */
-        video.currentTime = dur * 0.15;
+      function attach() {
+        /* Draw first frame immediately so canvas isn't blank */
+        drawFrame(0);
 
         ScrollTrigger.create({
           trigger: '#phone-reveal',
-          /* Start scrubbing 40vh before the section top hits the viewport —
-             the video is already playing before the section is fully visible */
-          start: 'top 140%',
+          start: 'top bottom',   /* begin as soon as section enters viewport */
           end: 'bottom bottom',
-          scrub: 0.3,
+          scrub: true,           /* lock 1:1 to scroll position — no lag */
           onUpdate(self) {
             const p = self.progress;
 
-            /* Map full scroll range directly to full video duration.
-               No windowing — the whole animation plays across the whole scroll. */
-            const target = p * dur;
-            video.currentTime = target;
+            /* Map scroll progress directly to frame index */
+            const idx = Math.round(p * (TOTAL - 1));
+            drawFrame(idx);
 
-            /* Hint fades out in first 8% of scroll */
+            /* Hint fades out in first 8% */
             if (hint) hint.style.opacity = p < 0.08 ? (1 - p / 0.08).toFixed(2) : '0';
 
-            /* Text panel slides in from 55%–85% of scroll */
+            /* Text panel slides in 55%–85% */
             if (textPanel) {
               let op, tx;
               if (p < 0.55) { op = 0; tx = 36; }
@@ -2104,18 +2110,24 @@
         });
       }
 
-      /* Buffer the full video as early as possible: play 1 frame then pause.
-         With dense keyframes in the re-encoded file, seeks are now instant. */
-      function buffer() {
-        video.play().then(() => {
-          video.pause();
-          attach();
-        }).catch(() => attach());
+      /* Preload all frames. Draw frame 0 as soon as it arrives so the
+         canvas shows something immediately. Attach ScrollTrigger once
+         the first ~10 frames are ready so scrubbing works right away. */
+      let attachedOnPartial = false;
+      for (let i = 0; i < TOTAL; i++) {
+        const img = new Image();
+        const n   = String(i + 1).padStart(3, '0');
+        img.src   = `assets/frames/frame_${n}.jpg`;
+        frames[i] = img;
+        img.onload = () => {
+          loaded++;
+          if (i === 0) drawFrame(0);
+          if (!attachedOnPartial && loaded >= 10) {
+            attachedOnPartial = true;
+            attach();
+          }
+        };
       }
-
-      if (video.readyState >= 3) buffer();
-      else if (video.readyState >= 1) attach();
-      else video.addEventListener('canplay', buffer, { once: true });
     })();
 
     /* ══════════════════════════════════════════════════════════════
