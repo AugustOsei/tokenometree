@@ -2013,7 +2013,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
-  <script src="https://unpkg.com/lenis@1.1.14/dist/lenis.min.js"></script>
 
   <script>
     /* ── Config ─────────────────────────────────────────────────── */
@@ -2219,15 +2218,7 @@
       });
     });
 
-    /* ══════════════════════════════════════════════════════════════
-       LENIS — smooth scroll, wired to GSAP ticker
-    ══════════════════════════════════════════════════════════════ */
-    const lenis = new Lenis();
-    lenis.on('scroll', ScrollTrigger.update);
-    gsap.ticker.add((time) => lenis.raf(time * 1000));
-    gsap.ticker.lagSmoothing(0);
-
-    /* ══════════════════════════════════════════════════════════════
+/* ══════════════════════════════════════════════════════════════
        PHONE SPLASH VIDEO — scroll scrubs video.currentTime
     ══════════════════════════════════════════════════════════════ */
     (function initSplashVideo() {
