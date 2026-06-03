@@ -2247,6 +2247,14 @@
       }
 
       function setupScrub() {
+        /* Mobile browsers (iOS + Android Chrome) ignore currentTime seeks
+           until the video has been played at least once. A silent play/pause
+           unlocks seeking without the user ever seeing motion. */
+        const playPromise = video.play();
+        if (playPromise !== undefined) {
+          playPromise.then(() => { video.pause(); video.currentTime = 0; }).catch(() => {});
+        }
+
         gsap.to(video, {
           currentTime: video.duration,
           ease: 'none',
