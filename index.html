@@ -19,7 +19,7 @@
 
   <link rel="icon" href="/assets/tokenometree_logo2.png" type="image/png">
   <link rel="apple-touch-icon" href="/assets/tokenometree_logo2.png">
-  <link rel="preload" as="video" href="/assets/phone-scrub.mp4" type="video/mp4">
+  <link rel="preload" as="video" href="assets/phone-scrub.mp4" type="video/mp4">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
@@ -115,11 +115,19 @@
         rgba(74,222,128,0.055) 50%,
         transparent
       );
-      animation: scanline 14s linear infinite;
+      display: none;
     }
 
     @keyframes scanline {
       to { top: 200%; }
+    }
+
+    html.is-scrolling .logo-wrap::before,
+    html.is-scrolling .logo-breathe,
+    html.is-scrolling .phone-scroll-hint .hint-arrow,
+    html.is-scrolling .budget-fill::after,
+    html.is-scrolling .alert-panel.visible {
+      animation-play-state: paused;
     }
 
     main, footer { position: relative; z-index: 1; }
@@ -449,8 +457,8 @@
       align-items: center;
       padding: 2rem 2rem 1.75rem;
       background: rgba(10, 10, 10, 0.55);
-      backdrop-filter: blur(18px);
-      -webkit-backdrop-filter: blur(18px);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
       border: 1px solid rgba(74, 222, 128, 0.1);
       box-shadow: 0 8px 40px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255,255,255,0.04);
       position: relative;
@@ -887,8 +895,8 @@
       justify-content: space-between;
       padding: 0.75rem 1.5rem;
       background: rgba(10,10,10,0.75);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
       border-bottom: 1px solid transparent;
       transform: translateY(-100%);
       transition: transform 0.35s cubic-bezier(0.16,1,0.3,1), border-color 0.35s, background 0.35s;
@@ -2172,6 +2180,22 @@
     /* ── GSAP reveal-on-scroll ──────────────────────────────────── */
     gsap.registerPlugin(ScrollTrigger);
 
+    (function initScrollPerformanceState() {
+      let scrollTimer = null;
+      window.__tokenometreeIsScrolling = false;
+      window.addEventListener('scroll', () => {
+        if (!window.__tokenometreeIsScrolling) {
+          window.__tokenometreeIsScrolling = true;
+          document.documentElement.classList.add('is-scrolling');
+        }
+        clearTimeout(scrollTimer);
+        scrollTimer = setTimeout(() => {
+          window.__tokenometreeIsScrolling = false;
+          document.documentElement.classList.remove('is-scrolling');
+        }, 140);
+      }, { passive: true });
+    })();
+
     (function initReveal() {
       const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       const isMobile = window.matchMedia('(max-width: 767px)').matches;
@@ -2539,16 +2563,16 @@
       try {
         renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: false });
       } catch (e) { return; } /* WebGL not available — skip silently */
-      /* Cap pixel ratio at 1.5 on mobile to avoid thrashing the GPU */
+      /* Keep the background cheap enough that scroll and video get frame budget first. */
       const isMobileDevice = window.innerWidth < 768;
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobileDevice ? 1.5 : 2));
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobileDevice ? 1.15 : 1.35));
       renderer.setClearColor(0x000000, 0);
 
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
       camera.position.z = 80;
 
-      const COUNT = isMobileDevice ? 800 : 2800;
+      const COUNT = isMobileDevice ? 420 : 1200;
       const positions = new Float32Array(COUNT * 3);
       const colors    = new Float32Array(COUNT * 3);
       const sizes     = new Float32Array(COUNT);
@@ -2632,6 +2656,7 @@
           return;
         }
         rafId = requestAnimationFrame(animate);
+        if (window.__tokenometreeIsScrolling) return;
         const t = clock.getElapsedTime();
 
         mouseX += (targetMouseX - mouseX) * 0.04;
@@ -2669,15 +2694,20 @@
       const nav = document.getElementById('sticky-nav');
       if (!nav) return;
       const heroEl = document.getElementById('hero');
-      function onScroll() {
-        const heroBottom = heroEl ? heroEl.getBoundingClientRect().bottom : 200;
-        if (heroBottom < 0) {
-          nav.classList.add('visible');
-        } else {
-          nav.classList.remove('visible');
-        }
+      let heroLimit = heroEl ? heroEl.offsetHeight : 200;
+      let isVisible = false;
+      function updateHeroLimit() {
+        heroLimit = heroEl ? heroEl.offsetHeight : 200;
       }
+      function onScroll() {
+        const shouldShow = window.scrollY > heroLimit;
+        if (shouldShow === isVisible) return;
+        isVisible = shouldShow;
+        nav.classList.toggle('visible', isVisible);
+      }
+      window.addEventListener('resize', updateHeroLimit, { passive: true });
       window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
     })();
 
     /* ══════════════════════════════════════════════════════════════
@@ -2696,6 +2726,7 @@
       let totalSpent = 0;
       let alertShown = false;
       let started = false;
+      let intervalId = null;
       const tokenState = { claude: 0, gpt: 0, gemini: 0, llama: 0, mistral: 0 };
 
       const LOG_TEMPLATES = [
@@ -2777,16 +2808,32 @@
         if (started) return;
         started = true;
         tick();
-        setInterval(tick, 900);
       }
 
-      /* Start when section scrolls into view */
-      ScrollTrigger.create({
-        trigger: '#monitor',
-        start: 'top 80%',
-        once: true,
-        onEnter: startMonitor,
-      });
+      function setMonitorActive(active) {
+        if (active) {
+          startMonitor();
+          if (intervalId === null) intervalId = setInterval(tick, 1100);
+        } else if (intervalId !== null) {
+          clearInterval(intervalId);
+          intervalId = null;
+        }
+      }
+
+      const monitor = document.getElementById('monitor');
+      if ('IntersectionObserver' in window && monitor) {
+        const observer = new IntersectionObserver(entries => {
+          setMonitorActive(entries.some(entry => entry.isIntersecting));
+        }, { rootMargin: '160px 0px' });
+        observer.observe(monitor);
+      } else {
+        ScrollTrigger.create({
+          trigger: '#monitor',
+          start: 'top 80%',
+          once: true,
+          onEnter: () => setMonitorActive(true),
+        });
+      }
     })();
 
   </script>
