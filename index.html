@@ -19,6 +19,7 @@
 
   <link rel="icon" href="/assets/tokenometree_logo2.png" type="image/png">
   <link rel="apple-touch-icon" href="/assets/tokenometree_logo2.png">
+  <link rel="preload" as="video" href="/assets/phone-scrub.mp4" type="video/mp4">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
@@ -2246,30 +2247,53 @@
           playPromise.then(() => { video.pause(); video.currentTime = 0; }).catch(() => {});
         }
 
-        gsap.to(video, {
-          currentTime: video.duration,
-          ease: 'none',
-          scrollTrigger: {
-            trigger: '#phone-reveal',
-            start: 'top bottom',
-            end: 'bottom bottom',
-            scrub: 1,
-            onUpdate(self) {
-              const p = self.progress;
+        const frameStep = 1 / 30;
+        let lastSeekTime = -1;
+        let targetTime = 0;
+        let seekRaf = null;
 
-              /* Hint fades out in first 8% */
-              if (hint) hint.style.opacity = p < 0.08 ? (1 - p / 0.08).toFixed(2) : '0';
+        function videoProgressFromScroll(scrollProgress) {
+          const reveal = document.getElementById('phone-reveal');
+          const pinProgress = reveal
+            ? Math.min(0.78, Math.max(0.45, window.innerHeight / reveal.offsetHeight))
+            : 0.56;
 
-              /* Text panel slides in 55%–85% */
-              if (textPanel) {
-                let op, tx;
-                if (p < 0.55) { op = 0; tx = 36; }
-                else if (p < 0.85) { const e = easeOut2((p - 0.55) / 0.30); op = e; tx = 36 - e * 36; }
-                else { op = 1; tx = 0; }
-                textPanel.style.opacity   = op.toFixed(3);
-                textPanel.style.transform = `translateX(${tx.toFixed(1)}px)`;
-              }
-            },
+          if (scrollProgress <= pinProgress) {
+            return (scrollProgress / pinProgress) * 0.12;
+          }
+          return 0.12 + ((scrollProgress - pinProgress) / (1 - pinProgress)) * 0.88;
+        }
+
+        function seekVideo() {
+          seekRaf = null;
+          const quantizedTime = Math.min(video.duration, Math.max(0, Math.round(targetTime / frameStep) * frameStep));
+          if (Math.abs(quantizedTime - lastSeekTime) < frameStep * 0.5) return;
+          lastSeekTime = quantizedTime;
+          video.currentTime = quantizedTime;
+        }
+
+        ScrollTrigger.create({
+          trigger: '#phone-reveal',
+          start: 'top bottom',
+          end: 'bottom bottom',
+          scrub: 1,
+          onUpdate(self) {
+            const p = self.progress;
+            targetTime = video.duration * videoProgressFromScroll(p);
+            if (seekRaf === null) seekRaf = requestAnimationFrame(seekVideo);
+
+            /* Hint fades out in first 8% */
+            if (hint) hint.style.opacity = p < 0.08 ? (1 - p / 0.08).toFixed(2) : '0';
+
+            /* Text panel slides in 55%–85% */
+            if (textPanel) {
+              let op, tx;
+              if (p < 0.55) { op = 0; tx = 36; }
+              else if (p < 0.85) { const e = easeOut2((p - 0.55) / 0.30); op = e; tx = 36 - e * 36; }
+              else { op = 1; tx = 0; }
+              textPanel.style.opacity   = op.toFixed(3);
+              textPanel.style.transform = `translateX(${tx.toFixed(1)}px)`;
+            }
           },
         });
       }
@@ -2591,8 +2615,23 @@
       canvas.classList.add('visible');
 
       const clock = new THREE.Clock();
+      let rafId = null;
+      let rendering = true;
+      function updateRenderState() {
+        const heroH = window.innerHeight;
+        const shouldRender = window.scrollY < heroH * 1.15;
+        if (shouldRender === rendering) return;
+        rendering = shouldRender;
+        if (rendering && rafId === null) animate();
+      }
+      window.addEventListener('scroll', updateRenderState, { passive: true });
+
       function animate() {
-        requestAnimationFrame(animate);
+        if (!rendering) {
+          rafId = null;
+          return;
+        }
+        rafId = requestAnimationFrame(animate);
         const t = clock.getElapsedTime();
 
         mouseX += (targetMouseX - mouseX) * 0.04;
