@@ -1238,6 +1238,7 @@
       height: 180vh;
       position: relative;
       background: #071409; /* matches phone-screen.png dark green bg */
+      overflow-x: hidden; /* contain text-panel slide-in without clipping it */
     }
 
     .phone-sticky {
@@ -1247,7 +1248,6 @@
       display: grid;
       grid-template-columns: 1fr 1fr;
       align-items: center;
-      overflow: hidden;
       background: #071409;
     }
 
@@ -1274,19 +1274,42 @@
       /* Give the phone section breathing room — on mobile it was
          flush against the hero with no gap */
       #phone-reveal {
-        height: 140vh; /* shorter scroll — text panel is hidden so less to scrub through */
+        height: 200vh; /* more scroll room now that both phone + text are visible */
         margin-top: 3rem;
         border-radius: 20px 20px 0 0; /* soft top edge so it feels like a new panel */
       }
       .phone-sticky {
         grid-template-columns: 1fr;
         top: 0;
-        padding-top: 2.5rem;
+        padding-top: 1.25rem;
         align-items: flex-start;
-        padding-bottom: 2rem;
+        padding-bottom: 1rem;
+        overflow: hidden; /* re-apply here only on mobile where layout is single-column */
       }
-      .phone-text-panel { display: none; }
-      .phone-frame-wrap { width: clamp(200px, 60vw, 260px); margin: 0 auto; }
+      /* Smaller phone on mobile so phone + text both fit within 100vh */
+      .phone-frame-wrap { width: clamp(130px, 38vw, 170px); margin: 0 auto; }
+
+      /* Show text panel below phone — static, no scroll animation on mobile */
+      .phone-text-panel {
+        display: flex;
+        opacity: 1;
+        transform: none;
+        padding: 0.875rem 1.25rem 0.5rem;
+        gap: 0.75rem;
+        text-align: center;
+        align-items: center;
+      }
+      /* Long paragraph is too tall to fit in viewport alongside the phone — hide it;
+         the headline + bullets carry the message on mobile */
+      .phone-text-panel p { display: none; }
+      .phone-text-bullets li { text-align: left; }
+    }
+
+    /* Mid-size screens: tighten text panel padding so text has room to animate in cleanly */
+    @media (min-width: 681px) and (max-width: 900px) {
+      .phone-text-panel {
+        padding: 1.5rem 1.5rem 1.5rem 1.25rem;
+      }
     }
 
     /* ── Left column: phone frame ─────────────────────────────── */
@@ -2265,22 +2288,35 @@
 
       function easeOut2(t) { return 1 - (1 - t) * (1 - t); }
 
+      /* On mobile the text panel is shown statically via CSS — skip JS animation */
+      const isMobile = window.matchMedia('(max-width: 680px)').matches;
+      if (isMobile && textPanel) {
+        textPanel.style.opacity = '1';
+        textPanel.style.transform = 'none';
+      }
+
       /* Reduced-motion: jump to last frame, skip scrub */
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        video.addEventListener('loadedmetadata', () => { video.currentTime = video.duration; });
+        video.addEventListener('canplay', () => { video.currentTime = video.duration; }, { once: true });
         if (textPanel) { textPanel.style.opacity = '1'; textPanel.style.transform = 'none'; }
         if (hint) hint.style.opacity = '0';
         return;
       }
 
       function setupScrub() {
-        /* Mobile browsers (iOS + Android Chrome) ignore currentTime seeks
-           until the video has been played at least once. A silent play/pause
-           unlocks seeking without the user ever seeing motion. */
-        const playPromise = video.play();
-        if (playPromise !== undefined) {
-          playPromise.then(() => { video.pause(); video.currentTime = 0; }).catch(() => {});
+        /* Mobile browsers (iOS + Android Chrome) ignore currentTime seeks until the video
+           has been played at least once. attemptUnlock does a silent play/pause to open
+           seeking. It's called immediately and again on first touch as a fallback, because
+           the initial play() promise can be rejected by browser policy before user interaction. */
+        function attemptUnlock() {
+          const p = video.play();
+          if (p !== undefined) p.then(() => { video.pause(); video.currentTime = 0; }).catch(() => {});
         }
+        attemptUnlock();
+        document.addEventListener('touchstart', function onFirstTouch() {
+          attemptUnlock();
+          document.removeEventListener('touchstart', onFirstTouch);
+        }, { once: true, passive: true });
 
         const frameStep = 1 / 30;
         let lastSeekTime = -1;
@@ -2320,8 +2356,8 @@
             /* Hint fades out in first 8% */
             if (hint) hint.style.opacity = p < 0.08 ? (1 - p / 0.08).toFixed(2) : '0';
 
-            /* Text panel slides in 55%–85% */
-            if (textPanel) {
+            /* Text panel slides in 55%–85% — desktop/tablet only; mobile shows it statically */
+            if (!isMobile && textPanel) {
               let op, tx;
               if (p < 0.55) { op = 0; tx = 36; }
               else if (p < 0.85) { const e = easeOut2((p - 0.55) / 0.30); op = e; tx = 36 - e * 36; }
@@ -2333,10 +2369,12 @@
         });
       }
 
-      if (video.readyState >= 1) {
+      /* Wait for canplay (readyState >= 3) not just loadedmetadata (readyState >= 1).
+         On mobile, metadata loads but the video isn't seekable until data is buffered. */
+      if (video.readyState >= 3) {
         setupScrub();
       } else {
-        video.addEventListener('loadedmetadata', setupScrub, { once: true });
+        video.addEventListener('canplay', setupScrub, { once: true });
       }
     })();
 
