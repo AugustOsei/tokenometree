@@ -435,6 +435,18 @@
       animation: hero-fade-up 0.9s 0.15s cubic-bezier(0.16,1,0.3,1) both;
     }
 
+    .hero-intro {
+      font-family: var(--font-display);
+      font-size: clamp(0.8rem, 2vw, 0.95rem);
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--lime);
+      opacity: 0.85;
+      margin-bottom: 0.75rem;
+      animation: hero-fade-up 0.9s 0.1s cubic-bezier(0.16,1,0.3,1) both;
+    }
+
     #hero .subhead {
       font-size: clamp(1.05rem, 2.5vw, 1.2rem);
       color: rgba(245,245,245,0.88);
@@ -470,13 +482,11 @@
       display: inline-flex;
       align-items: center;
       gap: 0.75rem;
-      margin: 1.5rem auto 0;
+      margin: 0 auto 1.25rem;
       padding: 0.6rem 1rem 0.6rem 0.75rem;
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
       border-radius: 12px;
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
     }
     .appstore-icon {
       width: 32px;
@@ -864,7 +874,7 @@
       html { scroll-behavior: auto; }
       #pixel-grid .scanline { display: none; }
       /* Ensure hero elements are fully visible with no animation delay */
-      .logo-wrap, #hero h1, #hero .subhead, .hero-glass { opacity: 1 !important; transform: none !important; }
+      .logo-wrap, .hero-intro, #hero h1, #hero .subhead, .hero-glass { opacity: 1 !important; transform: none !important; }
     }
 
     /* ── Scrollbar styling ──────────────────────────────────────── */
@@ -1651,12 +1661,23 @@
         >
       </div>
 
+      <p class="hero-intro">Meet Tokenometree.</p>
       <h1>Know every token.</h1>
       <p class="subhead">
         One dashboard for Anthropic, OpenAI, Google, Groq, Mistral and more. Finally know what you're actually spending on AI.
       </p>
 
       <div class="hero-glass">
+      <!-- App Store badge -->
+      <div class="appstore-badge" aria-label="Coming to the App Store">
+        <img src="assets/appstore2.png" alt="App Store icon" class="appstore-icon">
+        <div class="appstore-text">
+          <span class="appstore-label">Coming to</span>
+          <span class="appstore-name">iOS App Store</span>
+        </div>
+        <span class="appstore-pill">Soon</span>
+      </div>
+
       <!-- Form -->
       <div id="hero-form-wrap">
         <form class="waitlist-form" id="waitlist-form-hero" novalidate>
@@ -1682,16 +1703,6 @@
       <!-- Success -->
       <div class="success-panel hidden" id="hero-success" aria-live="polite"></div>
       </div><!-- /.hero-glass -->
-
-      <!-- App Store badge -->
-      <div class="appstore-badge" aria-label="Coming to the App Store">
-        <img src="assets/appstore2.png" alt="App Store icon" class="appstore-icon">
-        <div class="appstore-text">
-          <span class="appstore-label">Coming to</span>
-          <span class="appstore-name">iOS App Store</span>
-        </div>
-        <span class="appstore-pill">Soon</span>
-      </div>
 
       <!-- Provider badge row -->
       <div class="hero-ticker" aria-hidden="true">
